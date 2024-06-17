@@ -20,4 +20,12 @@ pivoted_with_dates<-df %>% group_by(Mode, year = lubridate::floor_date(Date, 'ye
 
 pivoted_with_dates_wider<-df %>% group_by(Mode, year = lubridate::floor_date(Date, 'year')) %>%
   summarise(Freq = sum(Amount)) %>% pivot_wider(names_from = year, 
-                                                values_from = Freq, values_fill = 0)
+                                                values_from = Freq, values_fill = 0)  %>% ungroup() %>%  { x <- . 
+                                                bind_rows(
+                                                  x,
+                                                  summarise(
+                                                    x ,
+                                                    across(where(is.numeric), ~ sum(.x, na.rm = TRUE)),
+                                                    across(where(is.character), ~"Total")
+                                                  )
+                                                )}
