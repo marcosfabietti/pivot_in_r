@@ -2,6 +2,9 @@ library (readr)
 library(dplyr)
 library(tidyr)
 library(lubridate)
+library(janitor)
+library(tibble)
+library(ggplot2)
 
 #data extracted from https://www.kaggle.com/datasets/prasad22/daily-transactions-dataset
 
@@ -32,10 +35,6 @@ pivoted_with_dates_wider<-df %>% group_by(Mode, year = lubridate::floor_date(Dat
 
 #Load plot data
 
-library(readr)
-library(janitor)
-library(tibble)
-
 budget_plot_all<- read_csv("230707-def-exp-2023-TABLES-en.csv")
 
 budget_plot_1<- budget_plot_all %>% slice(6:10)
@@ -60,7 +59,6 @@ budget_plot_3<- budget_plot_all[c(12:43),c(1:2)] %>%
 
 
 # GG PLOTS
-library(ggplot2)
 
 #plot 1, ggplot, 2 line plots
 #Title: UK is spending proportionally more on equipment and less on personnel
@@ -81,8 +79,23 @@ ggplot() +
 #y axis title left: £(000s)
 #y axis title right:%real GDP
 #blue columns, red and orange lines
+# ggplot only allows a 2d axis as scale of the first, you must also scale the line plots by the same factor
 
-
+ggplot(budget_plot_2, aes(x=Spending, y=`Real  UK defence spending`)) + 
+  geom_bar(stat = "identity", fill='#5793EB') +
+  geom_line( aes(x=Spending,y=`UK defence spending as % Real GDP`/0.00006), size=1, color='orange') +
+  geom_line( y=2/0.00006, size=2, color='red') +
+  labs(title = "Real defense spending remains constant over the last decade but as a % of GDP it is in decline") + #add title
+  ylim(c(0, 50000))+ #change y axis scale
+  theme(axis.title.x=element_blank())+
+  theme(axis.text.x=element_text(angle=90, hjust=0.9))+
+  scale_y_continuous(
+    n.breaks = 15,
+    # Features of the first axis
+    name = "£(000s)",
+    # Add a second axis (multiple of first one) and specify its features
+    sec.axis = sec_axis(~.*0.00006, name="%real GDP")
+  )
 
 #plot 3, ggplot, bars with 1 line plot and 1 highlight (UK)
 #Title: UK one of 10 NATO countries forecasted to meet the 2% in 2023
