@@ -112,3 +112,70 @@ ggplot(budget_plot_3, aes(x=reorder(Country,-`DFS%`), y=`DFS%`, fill=HL)) +
   scale_fill_manual( values = c( "yes"="blue", "no"="gray" ), guide = FALSE ) + #add highlihgt
   geom_line(y=2, group=1, color='red')  #add line and colour
 
+# PLOTLY 
+
+library(plotly)
+
+#plot 1, ggplot, 2 line plots
+#Title: UK is spending proportionally more on equipment and less on personnel
+#y axis title: % of UK  defense spending
+#blue and orange lines
+
+fig <- plot_ly(budget_plot_1, x = ~Spending, y = ~Equipment,
+               name = 'Equipment', type = 'scatter', mode = 'lines',line = list(color = 'blue'))
+fig <- fig %>% add_trace(y = ~Personnel, name = 'Personnel',mode = 'lines',line = list(color = 'orange') )
+fig <- fig %>% layout(title = "UK is spending proportionally more on equipment and less on personnel",
+                      xaxis = list(title = "Year"),
+                      yaxis = list(range=c(0,40),title = "% of UK  defense spending"))
+fig
+
+
+#plot 2, ggplot, bars with 2 line plots
+#Title: Real defense spending remains constant over the last decade but as a % of GDP it is in decline  
+#y axis title left: £(000s)
+#y axis title right:%real GDP
+#blue columns, red and orange lines
+# ggplot only allows a 2d axis as scale of the first, you must also scale the line plots by the same factor
+
+fig <- plot_ly(budget_plot_2, x = ~Spending, y = ~`Real  UK defence spending`,
+               type = 'bar', name = 'Real  UK defence spending', marker = list(color = '#5793EB'))
+fig <- fig %>% layout(title = "Real defense spending remains constant over the last decade but as a % of GDP it is in decline",
+                      xaxis = list(title = "Year"),
+                      yaxis = list(range=c(0,50000),title = "£(000s)"))
+fig <- fig %>% add_trace(budget_plot_2, x = ~Spending, y = ~`UK defence spending as % Real GDP`/0.00006, 
+                         name = 'UK defence spending as % Real GDP', type = 'scatter',  
+                         mode = 'lines+markers', marker = list(
+                           color = 'orange',size = 5,
+                           line = list(
+                             color = 'orange',
+                             width = 1
+                           )))
+fig <- fig %>% add_trace(y=2/0.00006, 
+                         name = 'Target', type = 'scatter',  
+                         mode = 'lines', marker = list(
+                           color = 'red',size = 5,
+                           line = list(
+                             color = 'red',
+                             width = 1
+                           )))
+fig
+
+
+#plot 3, ggplot, bars with 1 line plot and 1 highlight (UK)
+#Title: UK one of 10 NATO countries forecasted to meet the 2% in 2023
+#y axis title: 2023 Defense spending as % real GDP
+#grey columns, red lines
+
+fig <- plot_ly(budget_plot_3, x = ~reorder(Country,-`DFS%`), y = ~`DFS%`,
+               type = 'bar',name='dfsp%', marker = list(color = ifelse(budget_plot_3$HL == 'yes', "blue", "grey")))
+fig <- fig %>% layout(title = "UK one of 10 NATO countries forecasted to meet the 2% in 2023",
+                      yaxis = list(range=c(0,4.5),title = "2023 Defense spending as % real GDP"))
+fig <- fig %>% add_trace(y=2, 
+                         name = 'Target', type = 'scatter',  
+                         mode = 'lines', marker = list(
+                           color = 'red',size = 5,
+                           line = list(
+                             color = 'red',
+                             width = 1
+                           )))
+fig
