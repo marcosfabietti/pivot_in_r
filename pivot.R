@@ -142,7 +142,8 @@ fig <- plot_ly(budget_plot_2, x = ~Spending, y = ~`Real  UK defence spending`,
 fig <- fig %>% layout(title = "Real defense spending remains constant over the last decade but as a % of GDP it is in decline",
                       xaxis = list(title = "Year"),
                       yaxis = list(range=c(0,50000),title = "£(000s)"))
-fig <- fig %>% add_trace(budget_plot_2, x = ~Spending, y = ~`UK defence spending as % Real GDP`/0.00006, 
+fig <- fig %>% add_trace(budget_plot_2, x = ~Spending, y = ~`UK defence spending as % Real GDP`,
+                         yaxis = "y2",
                          name = 'UK defence spending as % Real GDP', type = 'scatter',  
                          mode = 'lines+markers', marker = list(
                            color = 'orange',size = 5,
@@ -150,7 +151,8 @@ fig <- fig %>% add_trace(budget_plot_2, x = ~Spending, y = ~`UK defence spending
                              color = 'orange',
                              width = 1
                            )))
-fig <- fig %>% add_trace(y=2/0.00006, 
+fig <- fig %>% add_trace(y=2, 
+                         yaxis = "y2",
                          name = 'Target', type = 'scatter',  
                          mode = 'lines', marker = list(
                            color = 'red',size = 5,
@@ -158,6 +160,8 @@ fig <- fig %>% add_trace(y=2/0.00006,
                              color = 'red',
                              width = 1
                            )))
+fig <- fig %>% layout(yaxis2 = list(overlaying = "y", side = "right"))
+
 fig
 
 
