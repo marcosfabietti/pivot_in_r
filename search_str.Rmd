@@ -1,0 +1,90 @@
+---
+title: "search_str"
+output: html_document
+date: "2024-06-21"
+---
+
+There are 2 main ways to match strings grep from base r and str_ from tidyverse.
+
+we use stringi to generate some random text for demonstration
+
+```{r setup, include=FALSE}
+
+library(stringr)
+sample_small <- stringi::stri_rand_lipsum(100)
+
+```
+
+grep provides the position of a pattern in the character vector, just as it's equivalent str_which does:
+
+```{r}
+grep("Lorem", sample_small)
+```
+```{r}
+str_which(sample_small, "Lorem")
+```
+grepl/str_detect on the other hand give you the information for each element of the vector, if it contains the string or not.
+
+
+```{r}
+grepl("Lorem", sample_small)
+```
+
+```{r}
+str_detect(sample_small, "Lorem")
+```
+
+Now in terms of why to use stringr over base, I think there are two arguments: different syntax makes it a little bit easier to use stringr with pipes
+
+
+```{r}
+library(dplyr)
+sample_small %>% 
+  str_detect("Lorem")
+```
+compared to:
+
+```{r}
+sample_small %>% 
+  grepl("Lorem", .) 
+```
+
+And stringr is roughly 5x faster than base (for the two functions we are looking at):
+
+```{r}
+library(bench)
+sample_big <- stringi::stri_rand_lipsum(100000)
+bench::mark(
+  base = grep("Lorem", sample_big),
+  stringr = str_which(sample_big, "Lorem")
+)
+```
+
+It is important to highlight that they treat N/A different:
+```{r}
+vector <- c("private Reise", NA, NA)
+stringr::str_detect(vector, "privat")
+```
+```{r}
+grepl("privat", vector)
+```
+with this in mind, let look at str_detect options:
+* str_detect() is case-sensitive
+* you can use regex (rugular expression):
+
+eg.g str_detect(colnames(df), "^c[54]|c[54]$")
+where:
+* ^ - start of string
+* c - a c
+* [45] - 4 or 5
+* | - or
+* c[45] - c4 or c5 ...
+* $ - ... at the end of the string.
+
+```{r}
+sample_small %>% 
+  str_detect("^Lor|em$")
+```
+for more material about regex go to : https://stringr.tidyverse.org/articles/regular-expressions.html
+
+
