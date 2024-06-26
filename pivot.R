@@ -5,6 +5,8 @@ library(lubridate)
 library(janitor)
 library(tibble)
 library(ggplot2)
+library(plotly)
+
 
 #data extracted from https://www.kaggle.com/datasets/prasad22/daily-transactions-dataset
 
@@ -15,10 +17,10 @@ unique(df$Mode)
 df<-df %>% select(Date, Mode, Amount) %>% drop_na()
 
 pivoted<-df %>% group_by(Mode) %>%
-                     summarise(Freq = sum(Amount))
+  summarise(Freq = sum(Amount))
 
 pivoted_with_dates<-df %>% group_by(Mode, year = lubridate::floor_date(Date, 'year')) %>%
-                     summarise(Freq = sum(Amount))
+  summarise(Freq = sum(Amount))
 
 
 pivoted_with_dates_wider<-df %>% group_by(Mode, year = lubridate::floor_date(Date, 'year')) %>%
@@ -114,8 +116,6 @@ ggplot(budget_plot_3, aes(x=reorder(Country,-`DFS%`), y=`DFS%`, fill=HL)) +
 
 # PLOTLY 
 
-library(plotly)
-
 #plot 1, ggplot, 2 line plots
 #Title: UK is spending proportionally more on equipment and less on personnel
 #y axis title: % of UK  defense spending
@@ -183,3 +183,53 @@ fig <- fig %>% add_trace(y=2,
                              width = 1
                            )))
 fig
+
+
+
+
+## flagging
+
+#Load and structure data
+
+budget_plot_all<- read_csv("230707-def-exp-2023-TABLES-en.csv")
+
+budget_plot_1<- budget_plot_all %>% slice(6:10)
+
+budget_plot_1<-budget_plot_1 %>% 
+  t %>% 
+  as.data.frame %>%
+  row_to_names(row_number = 1)%>% 
+  mutate_if(is.character, as.numeric)
+
+results <- data.frame(matrix(NA, nrow = nrow(budget_plot_1), 
+                             ncol = length(colnames(budget_plot_1))))
+names(results) <- names(budget_plot_1)
+
+for (col in colnames(budget_plot_1)){
+  for (j in 1:nrow(budget_plot_1)) {
+    results[j,col]<-ifelse(budget_plot_1[j,col]>1.1* budget_plot_1[1,col] | budget_plot_1[j,col]< 0.9 * budget_plot_1[1,col],
+                           'YES','NO')
+  }
+}
+
+budget_plot_1 <- cbind(data=budget_plot_1,lables=results)
+results_p<-  names (results)[ sapply( results, function(x) any (grepl("YES",x) ))]
+
+
+for (names in results_p){
+  
+  fig <- plot_ly(budget_plot_1, x = ~Spending, y =  ~get(names),
+                 name = names, type = 'scatter', mode = 'lines', line = list(size=5, color = 'blue'))
+  
+  fig <- fig %>% add_trace(budget_plot_1, x = ~Spending, y =  ~get(names),
+                           name = 'outliers', type = 'scatter', mode = 'marker', 
+                           marker = list(size= 10, color = ifelse(results[,names] == 'YES', "red", "blue")
+                           ))
+  
+  fig <- fig %>% layout(title = "UK spending per area oustide a variation +/- 10 %",
+                        xaxis = list(title = "Year"),
+                        yaxis = list(title = "% of UK  defense spending"))
+  print(fig)
+}
+
+
