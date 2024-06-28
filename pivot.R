@@ -212,7 +212,6 @@ for (col in colnames(budget_plot_1)){
   }
 }
 
-budget_plot_1 <- cbind(data=budget_plot_1,lables=results)
 results_p<-  names (results)[ sapply( results, function(x) any (grepl("YES",x) ))]
 
 
@@ -220,6 +219,12 @@ for (names in results_p){
   
   fig <- plot_ly(budget_plot_1, x = ~Spending, y =  ~get(names),
                  name = names, type = 'scatter', mode = 'lines', line = list(size=5, color = 'blue'))
+  
+  fig <- fig %>% add_trace(budget_plot_1, x = ~Spending, y =  1.1* budget_plot_1[1,names],
+                 name = 'UL', type = 'scatter', mode = 'lines', line = list(size=5, color = 'black',dash="dot"))
+  
+  fig <- fig %>% add_trace(budget_plot_1, x = ~Spending, y =  0.9* budget_plot_1[1,names],
+                 name = 'LL', type = 'scatter', mode = 'lines', line = list(size=5, color = 'black',dash="dot"))
   
   fig <- fig %>% add_trace(budget_plot_1, x = ~Spending, y =  ~get(names),
                            name = 'outliers', type = 'scatter', mode = 'marker', 
