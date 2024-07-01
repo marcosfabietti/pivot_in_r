@@ -238,3 +238,35 @@ for (names in results_p){
 }
 
 
+# make heatmap table with plotly
+  
+data <-budget_plot_1 %>% select(-c("Spending"))  %>% as.matrix()
+data <- apply(data, 1, function(x){x/mean(x)})
+data <-round(data, digits = 1)
+
+p <- plot_ly(x=colnames(data), y=rownames(data), z = data, type = "heatmap") %>%
+  layout(margin = list(l=120)) %>% 
+  add_annotations(x = colnames(data), y = rownames(data),
+                  text = data, xref = 'x', yref = 'y', showarrow = FALSE, font=list(color='black'))
+p
+
+#alternatively we can use the package gplots that is easier
+
+#install.packages('gplots')
+library(gplots)
+data <-budget_plot_1 %>% select(-c("Spending"))  %>% as.matrix()
+data <-round(data, digits = 1)
+
+#plot per area
+heatmap.2(data, scale = "column",cellnote=data, notecol="black",
+          col = bluered(100),trace='none',Rowv=FALSE,
+          dendrogram ='none', margins = c(12, 24))
+
+#or per year
+
+heatmap.2(data, scale = "row", cellnote=data, notecol="black",
+          col = bluered(100),trace='none',Rowv=FALSE,
+          dendrogram ='none', margins = c(12, 24))
+
+
+
