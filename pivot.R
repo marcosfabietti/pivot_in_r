@@ -291,9 +291,15 @@ results <- data.frame(matrix(NA, nrow = nrow(budget_plot_1),
                              ncol = length(colnames(budget_plot_1))))
 names(results) <- names(budget_plot_1)
 
+
 for (col in colnames(budget_plot_1)){
+
+  #fit linear regression
+  model <- budget_plot_1 %>% lm(get(col)~ Spending,.) %>% fitted.values()
+
+  #Compare with LR model
   for (j in 1:nrow(budget_plot_1)) {
-    results[j,col]<-ifelse(budget_plot_1[j,col]>1.1* budget_plot_1[1,col] | budget_plot_1[j,col]< 0.9 * budget_plot_1[1,col],
+    results[j,col]<-ifelse(budget_plot_1[j,col]>1.1* model[j] | budget_plot_1[j,col]< 0.9 * model[j],
                            'YES','NO')
   }
 }
@@ -303,18 +309,19 @@ results_p<-  names (results)[ sapply( results, function(x) any (grepl("YES",x) )
 
 for (names in results_p){
 
-  #fit linear regression
   model <- budget_plot_1 %>% lm(get(names)~ Spending,.) %>% fitted.values()
-
 
   fig <- plot_ly(budget_plot_1, x = ~Spending, y =  ~get(names),
                  name = names, type = 'scatter', mode = 'lines', line = list(size=5, color = 'blue'))
 
-  fig <- fig %>% add_trace(budget_plot_1, x = ~Spending, y =  1.1* budget_plot_1[1,names],
-                           name = 'UL', type = 'scatter', mode = 'lines', line = list(size=5, color = 'black',dash="dot"))
+  fig <- fig %>% add_trace(budget_plot_1, x = ~Spending, y =  1.1* model,
+                           name = 'LR UL', type = 'scatter', mode = 'lines', line = list(size=2, color = 'black',dash="dot"))
 
-  fig <- fig %>% add_trace(budget_plot_1, x = ~Spending, y =  0.9* budget_plot_1[1,names],
-                           name = 'LL', type = 'scatter', mode = 'lines', line = list(size=5, color = 'black',dash="dot"))
+  fig <- fig %>% add_trace(budget_plot_1, x = ~Spending, y =  model,
+                           name = 'LR', type = 'scatter', mode = 'lines', line = list(size=4, color = 'black',dash="dash"))
+
+  fig <- fig %>% add_trace(budget_plot_1, x = ~Spending, y =  0.9* model,
+                           name = 'LR LL', type = 'scatter', mode = 'lines', line = list(size=2, color = 'black',dash="dot"))
 
   fig <- fig %>% add_trace(budget_plot_1, x = ~Spending, y =  ~get(names),
                            name = 'outliers', type = 'scatter', mode = 'marker',
@@ -324,9 +331,6 @@ for (names in results_p){
   fig <- fig %>% layout(title = "UK spending per area oustide a variation +/- 10 %",
                         xaxis = list(title = "Year"),
                         yaxis = list(title = "% of UK  defense spending"))
-
-  fig <- fig %>% add_trace(x = ~Spending, y = model, mode = "lines")
-
 
   print(fig)
 }
