@@ -1,0 +1,235 @@
+---
+title: "COFOG Analysis"
+subtitle: "DS ACC PROG"
+author: "gabriel kite"
+output: 
+  html_document:
+    theme: paper
+    toc: true
+    toc_float: true
+    number_sections: true
+date: "`r Sys.Date()`"
+---
+
+```{r, echo=FALSE}
+htmltools::img(src = knitr::image_uri("ons-logo.png"), 
+               alt = 'logo', 
+               style = 'position:absolute; top:0; right:0; padding:10px;',
+               width = 300, 
+               height = 100)
+```
+
+```{css, echo = FALSE}
+h1.title {
+  font-size: 38px;
+  color: black;
+  text-align: center;
+  font-weight: bold
+}
+
+h3.subtitle {
+  font-size: 18px;
+  text-align: center;
+}
+
+h4.author {
+  font-size: 12px;
+  text-align: center;
+  font-style: italic;
+}
+
+h4.date {
+  font-size: 12px;
+  text-align: center;
+  color: blue
+}
+
+body{
+background-color: rgb(242,242,235);
+}
+```
+
+# Introduction
+
+## libraries
+
+The libraries we will use are the following:
+
+```{r packages, message=FALSE, warning=FALSE}
+
+library (readr)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(janitor)
+library(tibble)
+library(ggplot2)
+library(plotly)
+library(htmlwidgets)
+library(gplots)
+```
+
+# Tables
+
+## Pivoted table
+
+<button class="btn btn-primary" data-toggle="collapse" data-target="#tb"> Show/Hide </button>  
+<div id="tb" class="collapse"> 
+
+```{r tb,echo=FALSE, message=FALSE, warning=FALSE}
+df<- read_csv("Daily Household Transactions.csv", col_types = cols(Date = col_date(format = "%m/%d/%Y")))
+
+df<-df %>% select(Date, Mode, Amount) %>% drop_na()
+
+pivoted<-df %>% group_by(Mode) %>%
+  summarise(Freq = sum(Amount))
+
+pivoted_with_dates<-df %>% group_by(Mode, year = lubridate::floor_date(Date, 'year')) %>%
+  summarise(Freq = sum(Amount))
+
+
+pivoted_with_dates_wider<-df %>% group_by(Mode, year = lubridate::floor_date(Date, 'year')) %>%
+  summarise(Freq = sum(Amount)) %>% pivot_wider(names_from = year,
+                                                values_from = Freq, values_fill = 0)  %>% ungroup() %>%  { x <- .
+                                                bind_rows(
+                                                  x,
+                                                  summarise(
+                                                    x ,
+                                                    across(where(is.numeric), ~ sum(.x, na.rm = TRUE)),
+                                                    across(where(is.character), ~"Total")
+                                                  )
+                                                )}
+knitr::kable(pivoted_with_dates_wider)
+```
+</div>
+
+## Heatmap
+
+<button class="btn btn-primary" data-toggle="collapse" data-target="#hm"> Show/Hide </button>  
+<div id="hm" class="collapse">  
+
+```{r hm, echo=FALSE, message=FALSE, warning=FALSE}
+
+budget_plot_all<- read_csv("230707-def-exp-2023-TABLES-en.csv")
+
+budget_plot_1<- budget_plot_all %>% slice(6:10)
+
+budget_plot_1<-budget_plot_1 %>%
+  t %>%
+  as.data.frame %>%
+  row_to_names(row_number = 1)%>%
+  mutate_if(is.character, as.numeric)%>% head(-2)
+
+data <-budget_plot_1 %>% select(-c("Spending"))  %>% as.matrix()
+data <-round(data, digits = 1)
+
+#plot per area
+heatmap.2(data, scale = "column",cellnote=data, notecol="black",
+          col = bluered(100),trace='none',Rowv=FALSE,
+          dendrogram ='none', margins = c(12, 24))
+```
+</div>
+
+
+# Plots
+
+First we look at  UK as a whole
+
+## Threshold Plots
+
+<button class="btn btn-primary" data-toggle="collapse" data-target="#plott"> Show/Hide </button>  
+<div id="plott" class="collapse">  
+
+```{r plott, echo=FALSE, message=FALSE, warning=FALSE}
+budget_plot_3<- budget_plot_all[c(12:43),c(1:2)] %>%
+  row_to_names(row_number = 1)%>%
+  mutate_at('DFS%', as.numeric) %>%
+  mutate(HL = ifelse(Country=='United Kingdom', "yes", "no")) #add plot label
+
+fig <- plot_ly(budget_plot_3, x = ~reorder(Country,-`DFS%`), y = ~`DFS%`,
+               type = 'bar',name='dfsp%', marker = list(color = ifelse(budget_plot_3$HL == 'yes', "blue", "grey")))
+fig <- fig %>% layout(title = "UK one of 10 NATO countries forecasted to meet the 2% in 2023",
+                      yaxis = list(range=c(0,4.5),title = "2023 Defense spending as % real GDP"))
+fig <- fig %>% add_trace(y=2,
+                         name = 'Target', type = 'scatter',
+                         mode = 'lines', marker = list(
+                           color = 'red',size = 5,
+                           line = list(
+                             color = 'red',
+                             width = 1
+                           )))
+fig
+```
+
+</div>
+
+
+## Plotly Plots
+
+The areas with outliers, based on LR, are the following:
+
+<button class="btn btn-primary" data-toggle="collapse" data-target="#plot1"> Show/Hide </button>  
+<div id="plot1" class="collapse">  
+
+```{r plot1, echo=FALSE, message=FALSE, warning=FALSE}
+
+results <- data.frame(matrix(NA, nrow = nrow(budget_plot_1),
+                             ncol = length(colnames(budget_plot_1))))
+names(results) <- names(budget_plot_1)
+
+
+for (col in colnames(budget_plot_1)){
+
+  #fit linear regression
+  model <- budget_plot_1 %>% lm(get(col)~ Spending,.) %>% fitted.values()
+
+  #Compare with LR model
+  for (j in 1:nrow(budget_plot_1)) {
+    results[j,col]<-ifelse(budget_plot_1[j,col]>1.1* model[j] | budget_plot_1[j,col]< 0.9 * model[j],
+                           'YES','NO')
+  }
+}
+
+results_p<-  names (results)[ sapply( results, function(x) any (grepl("YES",x) ))]
+
+l <-htmltools::tagList()
+i<-1
+
+for (names in results_p){
+
+  model <- budget_plot_1 %>% lm(get(names)~ Spending,.) %>% fitted.values()
+
+  fig <- plot_ly(budget_plot_1, x = ~Spending, y =  ~get(names),
+                 name = names, type = 'scatter', mode = 'lines', line = list(size=5, color = 'blue'))
+
+  fig <- fig %>% add_trace(budget_plot_1, x = ~Spending, y =  1.1* model,
+                           name = 'LR UL', type = 'scatter', mode = 'lines', line = list(size=2, color = 'black',dash="dot"))
+
+  fig <- fig %>% add_trace(budget_plot_1, x = ~Spending, y =  model,
+                           name = 'LR', type = 'scatter', mode = 'lines', line = list(size=4, color = 'black',dash="dash"))
+
+  fig <- fig %>% add_trace(budget_plot_1, x = ~Spending, y =  0.9* model,
+                           name = 'LR LL', type = 'scatter', mode = 'lines', line = list(size=2, color = 'black',dash="dot"))
+
+  fig <- fig %>% add_trace(budget_plot_1, x = ~Spending, y =  ~get(names),
+                           name = 'outliers', type = 'scatter', mode = 'marker',
+                           marker = list(size= 10, color = ifelse(results[,names] == 'YES', "red", "blue")
+                           ))
+
+  fig<- fig %>% layout(title = "UK spending per area oustide a variation +/- 10 %",
+                        xaxis = list(title = "Year"),
+                        yaxis = list(title = "% of UK  defense spending"))
+  l[[i]]<-fig
+  i<-i+1
+  #print(fig)
+  
+}
+
+l
+```
+
+</div>
+
+# Conclusion
+
+Less than expected innit!
